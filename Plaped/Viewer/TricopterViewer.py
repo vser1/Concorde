@@ -39,10 +39,10 @@ class AnalogPlot:
         if (len(self.buffer) == 5):
           self.buffer = self.buffer[1:]
         if (self.buffer.encode('hex') == self.header):
-          print(self.packet.encode('hex'))
-#In some cases, the packet might not be complete. 
-#We check this 
-          if( len(self.packet) == 4 + 5*self.n32 + 3*self.n16 + 2*self.n8 + 5+self.nf ):
+          #print(self.packet.encode('hex'))
+          #In some cases, the packet might not be complete. 
+          #We check this 
+          if( len(self.packet) == 4 + 5*self.n32 + 3*self.n16 + 2*self.n8 + 5*self.nf ):
             #the packet is complete
             #We should decode it:
             offset = 4 
@@ -59,12 +59,11 @@ class AnalogPlot:
               print(x,end="\t")
             offset = 4 + 5*self.n32 + 3*self.n16 + 2*self.n8
             for i in range (0, self.nf):
-              #x = struct.unpack('<f',self.packet[offset+i*5+1:offset+i*5+5])[0]
-              x = (self.packet[offset+i*5+1:offset+i*5+5]).encode('hex')
+              x = struct.unpack('<f',self.packet[offset+i*5+1:offset+i*5+5])[0]
               print(x,end="\t")
             print("\n")
           else:
-            print(len(self.packet));
+            print("Packet not complete !");
           self.packet = self.buffer[0]
         else:
           self.packet += self.buffer[0]
