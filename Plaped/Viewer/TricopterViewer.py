@@ -19,9 +19,13 @@ class AnalogPlot:
       # open serial port
       self.ser = serial.Serial(strPort, baudrate)
       self.n32 = n32
+      self.d32 = [0]*n32
       self.n16 = n16
+      self.d16 = [0]*n16
       self.n8 = n8
+      self.d8 = [0]*n8
       self.nf = nf
+      self.df = [0]*nf
 
       #self.ax = deque([0.0]*maxLen)
       #self.ay = deque([0.0]*maxLen)
@@ -30,6 +34,26 @@ class AnalogPlot:
       self.header='ffffffff'
       self.buffer=""
       self.packet=""
+      
+  #this function parse the packet (complete) in the data
+  def parse(self):
+    offset = 4 
+    for i in range (0, self.n32):
+      self.d32[i] = struct.unpack('<i',self.packet[offset+i*5+1:offset+i*5+5])[0]
+      print(self.d32[i],end="\t")
+    offset = 4 + 5*self.n32 
+    for i in range (0, self.n16):
+      self.d16[i] = struct.unpack('<h',self.packet[offset+i*3+1:offset+i*3+3])[0]
+      print(self.d16[i],end="\t")
+    offset = 4 + 5*self.n32 + 3*self.n16 
+    for i in range (0, self.n8):
+      self.d8[i] = struct.unpack('<c',self.packet[offset+i*2+1:offset+i*2+2])[0]
+      print(self.d8[i],end="\t")
+    offset = 4 + 5*self.n32 + 3*self.n16 + 2*self.n8
+    for i in range (0, self.nf):
+      self.df[i] = struct.unpack('<f',self.packet[offset+i*5+1:offset+i*5+5])[0]
+      print(self.df[i],end="\t")
+    print("\n")
 
   # update plot
   #def update(self, frameNum, a0, a1):
@@ -45,23 +69,7 @@ class AnalogPlot:
           if( len(self.packet) == 4 + 5*self.n32 + 3*self.n16 + 2*self.n8 + 5*self.nf ):
             #the packet is complete
             #We should decode it:
-            offset = 4 
-            for i in range (0, self.n32):
-              x = struct.unpack('<i',self.packet[offset+i*5+1:offset+i*5+5])[0]
-              print(x,end="\t")
-            offset = 4 + 5*self.n32 
-            for i in range (0, self.n16):
-              x = struct.unpack('<h',self.packet[offset+i*3+1:offset+i*3+3])[0]
-              print(x,end="\t")
-            offset = 4 + 5*self.n32 + 3*self.n16 
-            for i in range (0, self.n8):
-              x = struct.unpack('<c',self.packet[offset+i*2+1:offset+i*2+2])[0]
-              print(x,end="\t")
-            offset = 4 + 5*self.n32 + 3*self.n16 + 2*self.n8
-            for i in range (0, self.nf):
-              x = struct.unpack('<f',self.packet[offset+i*5+1:offset+i*5+5])[0]
-              print(x,end="\t")
-            print("\n")
+            self.parse()
           else:
             print("Packet not complete !");
           self.packet = self.buffer[0]
@@ -75,7 +83,6 @@ class AnalogPlot:
               #a1.set_data(range(self.maxLen), self.ay)
       except KeyboardInterrupt:
           print('exiting')
-      
 
   # clean up
   def close(self):
