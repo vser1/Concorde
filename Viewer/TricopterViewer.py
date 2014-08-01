@@ -11,7 +11,6 @@ import matplotlib.animation as animation
 import io
 import struct
 import argparse
-import datetime as dt
 
 class TricopterData:
   # constr
@@ -127,7 +126,7 @@ def main():
   parser.add_argument('-c','--char',action="store",dest="n8",type=int,default='0',help='The number of uint8/char expected in the packet.')
   parser.add_argument('-f','--float',action="store",dest="nf",type=int,default='27',help='The number of floats expected in the packet.')
   parser.add_argument('-b','--baudrate',action="store",dest="baudrate",type=int,default='57600',help='The baudrate used .')
-  parser.add_argument('-B','--buffer',action="store",dest="buffer",type=int,default='10',help='The size of the print buffer.')
+  parser.add_argument('-B','--buffer',action="store",dest="buffer",type=int,default='10',help='The size of the plot buffer.')
   parser.add_argument('-m','--maxLen',action="store",dest="maxLen",type=int,default='0',help='The number of points to be printed. If 0 (default) whole history printed.')
   parser.add_argument('-H','--header',action="store",dest="header",default="ffffffff",help='The header of the packet. Default = ffffffff.')
   args = parser.parse_args()
@@ -167,7 +166,6 @@ def main():
   while True:
     tricopterData.update();
     if(tricopterData.newData == args.buffer):
-      n1 = dt.datetime.now()
       startPoint = 0
       if(args.maxLen):
         points = len(tricopterData.df[0])
@@ -225,8 +223,6 @@ def main():
 
       # Wait for new data to come
       tricopterData.newData = 0
-      n2 = dt.datetime.now()
-      print((n2-n1).microseconds/1e6)
   # clean up
   tricopterData.close()
 
