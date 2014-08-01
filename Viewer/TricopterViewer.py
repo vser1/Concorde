@@ -40,32 +40,33 @@ class TricopterData:
     #self.ay = deque([0.0]*maxLen)
     self.maxLen = maxLen
     #This is the header of the packet, it's where it starts
-    self.header='ffffffff'
+    self.header=args.header
+    self.headerLength = len(self.header)
     self.buffer=""
     self.packet=""
     self.newData=False
     
   #this function parse the packet (complete) in the data
   def parse(self):
-    offset = 4 
+    offset = self.headerLength 
     for i in range (0, self.n32):
       if (len(self.d32[i]) == self.maxLen):
         del self.d32[i][0]
       (self.d32[i]).append(  struct.unpack('<i',self.packet[offset+i*5+1:offset+i*5+5])[0])
       #print((self.d32[i])[self.elements],end="\t")
-    offset = 4 + 5*self.n32 
+    offset = self.headerLength + 5*self.n32 
     for i in range (0, self.n16):
       if (len(self.d16[i]) == self.maxLen):
         del self.d16[i][0]
       (self.d16[i]).append(struct.unpack('<h',self.packet[offset+i*3+1:offset+i*3+3])[0])
       #print((self.d16[i])[self.elements],end="\t")
-    offset = 4 + 5*self.n32 + 3*self.n16 
+    offset = self.headerLength + 5*self.n32 + 3*self.n16 
     for i in range (0, self.n8):
       if (len(self.d8[i]) == self.maxLen):
         del self.d8[i][0]
       (self.d8[i]).append(struct.unpack('<c',self.packet[offset+i*2+1:offset+i*2+2])[0])
       #print((self.d8[i])[self.elements],end="\t")
-    offset = 4 + 5*self.n32 + 3*self.n16 + 2*self.n8
+    offset = self.headerLength + 5*self.n32 + 3*self.n16 + 2*self.n8
     for i in range (0, self.nf):
       if (len(self.df[i]) == self.maxLen):
         del self.df[i][0]
@@ -78,18 +79,18 @@ class TricopterData:
   #def update(self, frameNum, a0, a1):
   def update(self):
     try:
-      self.buffer +=  self.ser.read()
-      if (len(self.buffer) == 5):
+      letter = self.ser.read()
+      print(letter.encode('hex'))
+      self.buffer +=  letter
+      if (len(self.buffer) == self.headerLength):
         self.buffer = self.buffer[1:]
       if (self.buffer.encode('hex') == self.header):
-        #print(self.packet.encode('hex'))
+        print(self.packet.encode('hex'))
         #In some cases, the packet might not be complete. 
         #We check this 
         if( len(self.packet) == 4 + 5*self.n32 + 3*self.n16 + 2*self.n8 + 5*self.nf ):
           #the packet is complete
           #We should decode it:
-          #if(self.elements == self.maxLen):
-          #print(self.packet.encode('hex'))
           self.newData=True
           self.parse()
         else:
@@ -125,38 +126,31 @@ def main():
   parser.add_argument('-f','--float',action="store",dest="nf",type=int,default='27',help='The number of floats expected in the packet.')
   parser.add_argument('-b','--baudrate',action="store",dest="baudrate",type=int,default='57600',help='The baudrate used .')
   parser.add_argument('-m','--maxLen',action="store",dest="maxLen",type=int,default='100',help='The baudrate used .')
+  parser.add_argument('-H','--header',action="store",dest="header",default='ffffffff',help='The header of the packet. Default = ffffffff.')
   args = parser.parse_args()
   print(args)
 
   plt.figure(1)
 
   plt.ion() #animates plot
-  ax1 = plt.axes()
+  ax1 = plt.axes([0.1,0.1,0.5,0.5],label="Servo angles")
   #make plot
-  g11,g12,g13, = plt.plot([], [], 'r', [],[],'g', [],[],'b')
-  plt.title('Servo angles')
+  g11,g12,g13, = ax1.plot([], [], 'r', [],[],'g', [],[],'b')
 
-  plt.figure(2)
-  plt.ion() #animates plot
-  ax2 = plt.axes()
+  ax2 = plt.axes([0.1,0.6,0.5,0.5],label="IMU angles")
   #make plot
-  g21,g22,g23, = plt.plot([], [], 'r', [],[],'g', [],[],'b')
-  plt.title('IMU angles')
+  g21,g22,g23, = ax2.plot([], [], 'r', [],[],'g', [],[],'b')
 
-  plt.figure(3)
-  plt.ion() #animates plot
-  ax3 = plt.axes()
+  ax3 = plt.axes([0.6,0.1,0.5,0.5],label="First joystick")
   #make plot
-  g31,g32,g33 = plt.plot([], [], 'r', [],[],'g', [], [], 'b')
-  plt.title('First joystick')
+  g31,g32,g33 = ax3.plot([], [], 'r', [],[],'g', [], [], 'b')
+  #ax3.title('')
 
-  plt.figure(4)
-  plt.ion() #animates plot
-  ax4 = plt.axes()
+  ax4 = plt.axes([0.6,0.6,0.5,0.5],label="Second joystick")
   #make plot
-  g41,g42,g43 = plt.plot([], [], 'r', [],[],'g', [], [], 'b')
-  plt.title('Second joystick')
+  g41,g42,g43 = ax4.plot([], [], 'r', [],[],'g', [], [], 'b')
 
+  plt.show()
 
   # The tricopter struct
   tricopterData = TricopterData(args)
@@ -165,7 +159,6 @@ def main():
     if(tricopterData.newData):
       #print(tricopterData.d32[0])
       #print(tricopterData.df[0])
-      plt.figure(1)
       g11.set_xdata(tricopterData.df[0])
       g11.set_ydata(tricopterData.df[1])
       g12.set_xdata(tricopterData.df[0])
@@ -173,43 +166,40 @@ def main():
       g13.set_xdata(tricopterData.df[0])
       g13.set_ydata(tricopterData.df[3])
       
-      plt.draw()
       ax1.relim()
       ax1.autoscale_view()
 
-      plt.figure(2)
       g21.set_xdata(tricopterData.df[0])
       g21.set_ydata(tricopterData.df[15])
       g22.set_xdata(tricopterData.df[0])
       g22.set_ydata(tricopterData.df[16])
       g23.set_xdata(tricopterData.df[0])
       g23.set_ydata(tricopterData.df[17])
-      plt.draw()
+
       ax2.relim()
       ax2.autoscale_view()
 
-      plt.figure(3)
       g31.set_xdata(tricopterData.df[0])
       g31.set_ydata(tricopterData.df[18])
       g32.set_xdata(tricopterData.df[0])
       g32.set_ydata(tricopterData.df[19])
       g33.set_xdata(tricopterData.df[0])
       g33.set_ydata(tricopterData.df[20])
-      plt.draw()
+
       ax3.relim()
       ax3.autoscale_view()
 
-      plt.figure(4)
       g41.set_xdata(tricopterData.df[0])
       g41.set_ydata(tricopterData.df[21])
       g42.set_xdata(tricopterData.df[0])
       g42.set_ydata(tricopterData.df[22])
       g43.set_xdata(tricopterData.df[0])
       g43.set_ydata(tricopterData.df[23])
-      plt.draw()
+      
       ax4.relim()
       ax4.autoscale_view()
 
+      plt.draw()
 
       # Wait for new data to come
       tricopterData.newData = False
