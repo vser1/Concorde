@@ -10,10 +10,21 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import io
 import struct
+import argparse
 
 class TricopterData:
   # constr
-  def __init__(self, strPort, baudrate, maxLen, n32, n16, n8, nf):
+  def __init__(self, args):
+    #gets the various params
+    strPort = args.strPort
+    baudrate = args.baudrate
+    maxLen = args.maxLen
+    n32 = args.n32
+    n16 = args.n16
+    n8 = args.n8
+    nf = args.nf
+
+    print('reading from serial port %s...' % strPort)
     # open serial port
     self.ser = serial.Serial(strPort, baudrate)
     self.n32 = n32
@@ -82,7 +93,12 @@ class TricopterData:
           self.newData=True
           self.parse()
         else:
-          print("Packet not complete !");
+          print("Packet not complete !",end="");
+          print("Length=",end="");
+          print(len(self.packet),end="");
+          print(" expected ",end="");
+          print(4 + 5*self.n32 + 3*self.n16 + 2*self.n8 + 5*self.nf );
+          print(self.packet.encode('hex'))
         self.packet = self.buffer[0]
       else:
         self.packet += self.buffer[0]
@@ -99,36 +115,51 @@ class TricopterData:
 
 # main() function
 def main():
-  strPort = '/dev/ttyUSB0'
-  baudrate = 57600
-  print('reading from serial port %s...' % strPort)
 
-  # protocol
-  n32 = 1;    # count of int32 values
-  n16 = 0;    # count of int16 values
-  n8 = 0;     # count of uint8 values
-  nf = 27;     # count of float values
-  n = n32+n16+n8+nf;
-  #max elements in a plot
-  maxLen = 100
-  
+  # arguments of the cli
+  parser = argparse.ArgumentParser(description='Casts and plots binary serial data.')
+  parser.add_argument('-p','--port',action="store",dest="strPort",default='/dev/ttyUSB0',help='The serial port to listen to. /dev/tty* on UNIX, COM* works maybe on Windows')
+  parser.add_argument('-l','--long',action="store",dest="n32",type=int,default='1',help='The number of uint32 expected in the packet.')
+  parser.add_argument('-s','--short',action="store",dest="n16",type=int,default='0',help='The number of uint16 expected in the packet.')
+  parser.add_argument('-c','--char',action="store",dest="n8",type=int,default='0',help='The number of uint8/char expected in the packet.')
+  parser.add_argument('-f','--float',action="store",dest="nf",type=int,default='27',help='The number of floats expected in the packet.')
+  parser.add_argument('-b','--baudrate',action="store",dest="baudrate",type=int,default='57600',help='The baudrate used .')
+  parser.add_argument('-m','--maxLen',action="store",dest="maxLen",type=int,default='100',help='The baudrate used .')
+  args = parser.parse_args()
+  print(args)
+
   plt.figure(1)
 
   plt.ion() #animates plot
   ax1 = plt.axes()
   #make plot
-  g11,g12,g13 = plt.plot([], [], 'r', [],[],'g', [],[],'b')
+  g11,g12,g13, = plt.plot([], [], 'r', [],[],'g', [],[],'b')
   plt.title('Servo angles')
 
   plt.figure(2)
   plt.ion() #animates plot
   ax2 = plt.axes()
   #make plot
-  g21,g22,g23 = plt.plot([], [], 'r', [],[],'g', [],[],'b')
+  g21,g22,g23, = plt.plot([], [], 'r', [],[],'g', [],[],'b')
   plt.title('IMU angles')
 
+  plt.figure(3)
+  plt.ion() #animates plot
+  ax3 = plt.axes()
+  #make plot
+  g31,g32,g33 = plt.plot([], [], 'r', [],[],'g', [], [], 'b')
+  plt.title('First joystick')
+
+  plt.figure(4)
+  plt.ion() #animates plot
+  ax4 = plt.axes()
+  #make plot
+  g41,g42,g43 = plt.plot([], [], 'r', [],[],'g', [], [], 'b')
+  plt.title('Second joystick')
+
+
   # The tricopter struct
-  tricopterData = TricopterData(strPort, baudrate, maxLen, n32, n16, n8, nf)
+  tricopterData = TricopterData(args)
   while True:
     tricopterData.update();
     if(tricopterData.newData):
@@ -156,6 +187,29 @@ def main():
       plt.draw()
       ax2.relim()
       ax2.autoscale_view()
+
+      plt.figure(3)
+      g31.set_xdata(tricopterData.df[0])
+      g31.set_ydata(tricopterData.df[18])
+      g32.set_xdata(tricopterData.df[0])
+      g32.set_ydata(tricopterData.df[19])
+      g33.set_xdata(tricopterData.df[0])
+      g33.set_ydata(tricopterData.df[20])
+      plt.draw()
+      ax3.relim()
+      ax3.autoscale_view()
+
+      plt.figure(4)
+      g41.set_xdata(tricopterData.df[0])
+      g41.set_ydata(tricopterData.df[21])
+      g42.set_xdata(tricopterData.df[0])
+      g42.set_ydata(tricopterData.df[22])
+      g43.set_xdata(tricopterData.df[0])
+      g43.set_ydata(tricopterData.df[23])
+      plt.draw()
+      ax4.relim()
+      ax4.autoscale_view()
+
 
       # Wait for new data to come
       tricopterData.newData = False
