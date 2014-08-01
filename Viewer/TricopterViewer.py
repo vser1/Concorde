@@ -126,7 +126,7 @@ def main():
   parser.add_argument('-c','--char',action="store",dest="n8",type=int,default='0',help='The number of uint8/char expected in the packet.')
   parser.add_argument('-f','--float',action="store",dest="nf",type=int,default='27',help='The number of floats expected in the packet.')
   parser.add_argument('-b','--baudrate',action="store",dest="baudrate",type=int,default='57600',help='The baudrate used .')
-  parser.add_argument('-m','--maxLen',action="store",dest="maxLen",type=int,default='100',help='The baudrate used .')
+  parser.add_argument('-m','--maxLen',action="store",dest="maxLen",type=int,default='0',help='The number of points to be printed. If 0 (default) whole history printed.')
   parser.add_argument('-H','--header',action="store",dest="header",default="ffffffff",help='The header of the packet. Default = ffffffff.')
   args = parser.parse_args()
   print(args)
@@ -161,10 +161,11 @@ def main():
   while True:
     tricopterData.update();
     if(tricopterData.newData):
-      points = len(tricopterData.df[0])
       startPoint = 0
-      if(points>args.maxLen):
-       startPoint = points-args.maxLen
+      if(args.maxLen):
+        points = len(tricopterData.df[0])
+        if(points>args.maxLen):
+          startPoint = points-args.maxLen
       #print(tricopterData.d32[0])
       #print(tricopterData.df[0])
       g11.set_xdata(tricopterData.df[0][startPoint:])
