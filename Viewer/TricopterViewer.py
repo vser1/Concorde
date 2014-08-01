@@ -11,6 +11,7 @@ import matplotlib.animation as animation
 import io
 import struct
 import argparse
+import datetime as dt
 
 class TricopterData:
   # constr
@@ -33,7 +34,7 @@ class TricopterData:
     self.buffer=""
     self.headerComplete = False # is turned to true once a header has been complete.
     self.packet=""
-    self.newData=False
+    self.newData=0
     self.packetCorrect=True
     
 
@@ -87,7 +88,7 @@ class TricopterData:
         if(self.packetCorrect):
           #Parse it !
           self.parse()
-          self.newData=True
+          self.newData+=1
         else:
           print("Faulty packet")
           self.packetCorrect = True
@@ -126,6 +127,7 @@ def main():
   parser.add_argument('-c','--char',action="store",dest="n8",type=int,default='0',help='The number of uint8/char expected in the packet.')
   parser.add_argument('-f','--float',action="store",dest="nf",type=int,default='27',help='The number of floats expected in the packet.')
   parser.add_argument('-b','--baudrate',action="store",dest="baudrate",type=int,default='57600',help='The baudrate used .')
+  parser.add_argument('-B','--buffer',action="store",dest="buffer",type=int,default='10',help='The size of the print buffer.')
   parser.add_argument('-m','--maxLen',action="store",dest="maxLen",type=int,default='0',help='The number of points to be printed. If 0 (default) whole history printed.')
   parser.add_argument('-H','--header',action="store",dest="header",default="ffffffff",help='The header of the packet. Default = ffffffff.')
   args = parser.parse_args()
@@ -154,13 +156,18 @@ def main():
   #make plot
   g41,g42,g43 = ax4.plot([], [], 'r', [],[],'g', [], [], 'b')
 
+  ax5 = plt.axes([a+b,a+b,b/2,b/2],label="IMU angles")
+  #make plot
+  g51, = ax5.plot([], [], 'r*')
+
   plt.show()
 
   # The tricopter struct
   tricopterData = TricopterData(args)
   while True:
     tricopterData.update();
-    if(tricopterData.newData):
+    if(tricopterData.newData == args.buffer):
+      n1 = dt.datetime.now()
       startPoint = 0
       if(args.maxLen):
         points = len(tricopterData.df[0])
@@ -208,10 +215,18 @@ def main():
       ax4.relim()
       ax4.autoscale_view()
 
+      g51.set_xdata(tricopterData.df[0][startPoint:])
+      g51.set_ydata(tricopterData.df[0][startPoint:])
+      
+      ax5.relim()
+      ax5.autoscale_view()
+
       plt.draw()
 
       # Wait for new data to come
-      tricopterData.newData = False
+      tricopterData.newData = 0
+      n2 = dt.datetime.now()
+      print((n2-n1).microseconds/1e6)
   # clean up
   tricopterData.close()
 
